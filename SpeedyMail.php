@@ -58,7 +58,7 @@
 			} else {
 				$this->setFrom( 'From', 'root@localhost.localdomain' ); // Apparently, no one helped us out...fall back
 			}
-			
+
 			$this->_boundary = ( md5( time() )); // Generate a somewhat random string to designate our barrier
 			$this->setHeader( 'MIME-Version', '1.0' ); // Set the MIME Version to use
 			$this->setHeader( 'X-Mailer', 'SpeedyMail/'.$this->_version ); // Set the X-Mailer header...Can be overridded or removed VIA the unsetHeader method
@@ -79,10 +79,10 @@
 			if ( empty( $this->_attachments ) || $force ) {
 				$this->setHeader( 'Content-Type', sprintf( '%s; charset="%s"', $content_type, $this->_charset ));
 			}
-			
+
 			return $this;
 		}
-		
+
 		/**
 		 * setPriority, sets the urgency in which the SMTP servers involved should handle the message
 		 * 
@@ -110,8 +110,10 @@
 					$this->setHeader('Importance', 'Low');
 					break;
 			}
+
+			return $this;
 		}
-		
+
 		/**
 		 * setBody, sets the message body of the email to be sent.
 		 * This function can take a URL, File Path, or Standard message text.
@@ -137,7 +139,7 @@
 					$type = 'text/html';
 					break;
 			}
-			
+
 			if ( !empty( $body ) && file_exists( $body )) {
 				switch( strtolower( $template_type )) {
 					case '':
@@ -160,13 +162,13 @@
 						break;
 				}
 			}
-			
+
 			$this->setContentType( $type );
 			$this->_body = $body;
-			
+
 			return $this;
 		}
-		
+
 		/**
 		 * unsetHeader/setHeader, sets and unsets a mail header. Note the name/key is case sensative.
 		 */
@@ -174,11 +176,11 @@
 		public function setHeader( $key, $value ) {
 			if ( empty( $key ))
 				return;
-			
+
 			$this->_headers[$key] = $value;
 			return $this;
 		}
-		
+
 		public function bind( $key, $value ) { $this->_replacements[$key] = $value; return $this; }
 		public function addTo( $addr, $name ) { $this->addRecipient( $addr, $name, 'to' ); return $this; }
 		public function addCc( $addr, $name ) { $this->addRecipient( $addr, $name, 'cc' ); return $this; }
@@ -187,16 +189,16 @@
 			if ( empty( $this->_attachments )) {
 				$this->setHeader( 'Content-Type', sprintf( 'multipart/mixed; boundary=%s', $this->_boundary ));
 			}
-			
+
 			$this->_attachments[] = $attachment;
 			return $this;
 		}
 		public function addRecipient( $addr, $name, $type = 'to' ) {
 			if ( empty( $addr ))
 				return;
-			
+
 			$addr = empty( $name ) ? $addr : sprintf( '%s <%s>', $name, $addr ); // Set the address up correctly
-			
+
 			switch( strtolower( $type )) {
 				case 'to':
 				case 'cc':
@@ -204,7 +206,7 @@
 					$this->_recipients[$addr] = $type;
 					break;
 			}
-			
+
 			return $this;
 		}
 		
@@ -213,13 +215,13 @@
 			$cc = implode( ',', $this->getRecipients( 'cc' ));
 			$bcc = implode( ',', $this->getRecipients( 'bcc' ));
 			$headers = implode( $this->_crlf, $this->_headers );
-			
+
 			if ( !empty( $cc )) { $this->setHeader( 'Cc', $cc ); }
 			if ( !empty( $ccc )) { $this->setHeader( 'Bcc', $ccc ); }
 			
 			return @mail( $to, $this->_subject, $this->buildBody(), $this->buildHeaders() );
 		}
-		
+
 		// Protected functions
 		protected function getRecipients( $type = 'to' ) {
 			$addr = array();
@@ -229,37 +231,37 @@
 					$addr[] = $address;
 				}
 			}
-			
+
 			return $addr;
 		}
-		
+
 		protected function replace() {
 			if ( empty( $this->_replacements )) {
 				return $this->_body;
 			}
-			
+
 			$body = $this->_body;
 			foreach( $this->_replacements as $key => $value ) {
 				$body = str_replace( $key, $value, $body );
 			}
-			
+
 			return $body;
 		}
-		
+
 		protected function buildHeaders() {
 			$parts = array();
-			
+
 			foreach ( $this->_headers as $header => $value ) {
 				$parts[] = sprintf( '%s: %s', $header, $value );
 			}
 			return implode( $this->_crlf, $parts );
 		}
-		
+
 		protected function buildBody() {
 			if ( empty( $this->_attachments )) {
 				return $this->_body;
 			}
-			
+
 			$parts = array();
 			$parts[] = '--'.$this->_boundary;
 			$parts[] = sprintf( 'Content-Type: %s; charset=%s', $this->_content_type, $this->_charset );
@@ -268,7 +270,7 @@
 			$parts[] = $this->replace();
 			$parts[] = '';
 			$parts[] = '';
-			
+
 			foreach ( $this->_attachments as $attachment ) {
 				$parts[] = '--'.$this->_boundary;
 				$parts[] = sprintf( 'Content-Type: %s; name="%s"', $attachment->getMime(), $attachment->getName() );
@@ -279,7 +281,7 @@
 				$parts[] = '';
 			}
 			$parts[] = '--'.$this->_boundary.'--';
-			
+
 			return implode( $this->_crlf, $parts );
 		}
 	}
@@ -289,7 +291,7 @@
 		protected $_name = NULL;
 		protected $_mime = NULL;
 		protected $_mode = 'attachment';
-		
+
 		public static function init() { return new self(); }
 		public function __construct( $path = NULL, $name = NULL, $type = NULL, $mode = 'attachment' ) {
 			$this->setPath( $path );
@@ -297,36 +299,36 @@
 			$this->setMime( $type );
 			$this->setMode( $mode );
 		}
-		
+
 		public function getData() {
 			$data = null;
-			
+
 			if ( file_exists( $this->_path )) {
 				$data = file_get_contents( $this->_path );
 				$data = chunk_split(base64_encode( $data )); // Base64 encode and split up the data so it can be sent
 			} else 
 				throw new Exception( sprintf( 'Speedy Mail - Error! Could not open file %s', $this->_path ));
-			
+
 			return $data;		
 		}
-		
+
 		// Public functions
 		public function setPath( $path ) { $this->_path = $path; return $this; }
 		public function setName( $name ) { $this->_name = $name; return $this; }
 		public function setMode( $mode ) { $this->_mode = $mode; return $this; }
 		public function setMime( $mime ) { $this->_mime = $mime; return $this; }
-		
+
 		public function getPath() { return $this->_path; }
 		public function getName() { return $this->_name; }
 		public function getMode() { return $this->_mode; }
 		public function getMime() {
 			if ( empty( $this->_path ))
 				return NULL;
-			
+
 			if ( !file_exists( $this->_path )) {
 				throw new Exception( sprintf( 'Speedy Mail - Error! Could not open file %s', $this->_path ));
 			}
-			
+
 			$this->_mime = mime_content_type( $this->_path );
 			return $this->_mime;
 		}
@@ -346,7 +348,7 @@
 		        'xml' => 'application/xml',
 		        'swf' => 'application/x-shockwave-flash',
 		        'flv' => 'video/x-flv',
-		
+
 		        // Images
 		        'png' => 'image/png',
 		        'jpe' => 'image/jpeg',
@@ -359,38 +361,38 @@
 		        'tif' => 'image/tiff',
 		        'svg' => 'image/svg+xml',
 		        'svgz' => 'image/svg+xml',
-		
+
 		        // Archives
 		        'zip' => 'application/zip',
 		        'rar' => 'application/x-rar-compressed',
 		        'exe' => 'application/x-msdownload',
 		        'msi' => 'application/x-msdownload',
 		        'cab' => 'application/vnd.ms-cab-compressed',
-		
+
 		        // Audio / Video
 		        'mp3' => 'audio/mpeg',
 		        'qt' => 'video/quicktime',
 		        'mov' => 'video/quicktime',
-		
+
 		        // Adobe
 		        'pdf' => 'application/pdf',
 		        'psd' => 'image/vnd.adobe.photoshop',
 		        'ai' => 'application/postscript',
 		        'eps' => 'application/postscript',
 		        'ps' => 'application/postscript',
-		
+
 		        // MS Office
 		        'doc' => 'application/msword',
 		        'rtf' => 'application/rtf',
 		        'xls' => 'application/vnd.ms-excel',
 		        'xlsx' => 'application/vnd.ms-excel',
 		        'ppt' => 'application/vnd.ms-powerpoint',
-		
+
 		        // Open Office
 		        'odt' => 'application/vnd.oasis.opendocument.text',
 		        'ods' => 'application/vnd.oasis.opendocument.spreadsheet',
 		    );
-		
+
 		    $ext = strtolower( array_pop( explode( '.',$filename )));
 		    if ( array_key_exists( $ext, $mime_types )) {
 		        return $mime_types[$ext];
@@ -398,7 +400,7 @@
 		        $finfo = finfo_open( FILEINFO_MIME );
 		        $mimetype = finfo_file($finfo, $filename);
 		        finfo_close($finfo);
-				
+
 		        return $mimetype;
 		    } else {
 		        return 'application/octet-stream';
