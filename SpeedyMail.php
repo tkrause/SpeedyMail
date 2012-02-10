@@ -1,7 +1,7 @@
 <?php
 	/*
 	 *  Software: SpeedyMail SMTP Class
-	 *   Version: 1.0
+	 *   Version: 1.0.1
 	 *      Site: http://codesector.net/projects/SpeedyMail
 	 *   Authors: Thomas Krause
 	 * Copyright: (c) 2011 - 2012 Thomas Krause. All Rights Reserved.
@@ -15,8 +15,8 @@
 	 * at the site provided above.
 	 * 
 	 */
-	
-	
+
+
 	/**
 	 * SpeedyMail 
 	 *
@@ -26,30 +26,30 @@
 	 * @author Thomas Krause
 	 * @copyright 2012 Thomas Krause
 	 * @license http://codesector.net/licenses/mit.txt MIT License
-	 * @version Release: 1.0
+	 * @version Release: 1.0.1
 	 * @link http://codesector.net/projects/SpeedyMail
 	 */
-	const SMTP_PRIORITY_HIGH = 1;
-	const SMTP_PRIORITY_NORMAL = 3;
-	const SMTP_PRIORITY_LOW = 5;
 
 	class SpeedyMail {
 		// Private properties
+		private $_version = '1.0.1';
+
+		// Protected properties
 		protected $_headers = array();
 		protected $_recipients = array();
 		protected $_attachments = array();
 		protected $_replacements = array();
-		
+
 		protected $_crlf = "\r\n";
 		protected $_wordwrap = 0;
 		protected $_charset = 'iso-8859-1';
 		protected $_content_type = 'text/plain';
 		protected $_encoding = '8bit';
 		protected $_boundary = NULL;
-		
+
 		protected $_subject = NULL;
 		protected $_body = NULL;
-		
+
 		// Public methods
 		public static function init() { return new self(); }
 		public function __construct() {
@@ -59,17 +59,20 @@
 				$this->setFrom( 'From', 'root@localhost.localdomain' ); // Apparently, no one helped us out...fall back
 			}
 			
-			$this->_boundary = ( md5( time() ));
-			$this->setHeader( 'MIME-Version', '1.0' );
+			$this->_boundary = ( md5( time() )); // Generate a somewhat random string to designate our barrier
+			$this->setHeader( 'MIME-Version', '1.0' ); // Set the MIME Version to use
+			$this->setHeader( 'X-Mailer', 'SpeedyMail/'.$this->_version ); // Set the X-Mailer header...Can be overridded or removed VIA the unsetHeader method
+			
 			$this->setContentType(); // Just use the defaults of the function
 		}
-		
+
 		public function setReplyTo( $reply ) { $this->setHeader( 'Reply-To', $reply ); }
-		public function setFrom( $from ) { $this->setHeader( 'From', $from ); $this->setHeader( 'Return-Path', $from ); return $this; }
 		public function setSubject( $subject ) { $this->_subject = $subject; return $this; }
 		public function setWordWrap( $wrap = 0 ) { $this->_wordwrap = $wrap; return $this; }
 		public function setCharset( $charset = 'iso-8859-1' ) { $this->_charset = $charset; return $this; }
-		public function setTransferEncoding( $encoding ) { $this->_encoding = $encoding; return $this; }
+		public function setTransferEncoding( $encoding = '8bit' ) { $this->_encoding = $encoding; return $this; }
+		public function setDeliveryReceipt( $addr ) { $this->setHeader( 'Disposition-Notification-To', $addr ); }
+		public function setFrom( $from ) { $this->setHeader( 'From', $from ); $this->setHeader( 'Return-Path', $from ); return $this; }
 		public function setContentType( $content_type = 'text/plain', $force = FALSE ) {
 			$this->_content_type = $content_type;
 			
@@ -80,6 +83,46 @@
 			return $this;
 		}
 		
+		/**
+		 * setPriority, sets the urgency in which the SMTP servers involved should handle the message
+		 * 
+		 * @param	String/Integer	$priority	Contains the priority level to be the new level of this message
+		 * @return	None						Does not return a value
+		 */
+		public function setPriority ( $priority = 'normal' ) {
+			switch ( strtolower( (string)$priority )) {
+				case 'high':
+				case '1':
+					$this->setHeader('X-Priority', '1');
+					$this->setHeader('X-MSMail-Priority', 'High');
+					$this->setHeader('Importance', 'High');
+					break;
+				case 'normal':
+	            case '3':
+	                $this->setHeader('X-Priority', '3');
+					$this->setHeader('X-MSMail-Priority', 'Normal');
+					$this->setHeader('Importance', 'Normal');
+					break;
+	            case 'low':
+	            case '5':
+	                $this->setHeader('X-Priority', '5');
+					$this->setHeader('X-MSMail-Priority', 'Low');
+					$this->setHeader('Importance', 'Low');
+					break;
+			}
+		}
+		
+		/**
+		 * setBody, sets the message body of the email to be sent.
+		 * This function can take a URL, File Path, or Standard message text.
+		 * If a URL or File Path is entered, the body will be set to the contents of this File or URL.
+		 * 
+		 * @param	String	$body			Can contain raw text, html, a URL, or FilePath accessible by this server
+		 * @param	String	$type			Currently supports types of "text" and "html". This is the Content-Type for the message body
+		 * @param	String	$template_type	If body is anything other than raw input, this should be specified to set the method for retrieving the content.
+		 * 									Supports 'text' or 'html, 'php', 'url'
+		 * @param	Array	$context		If $template_type is set to URL this param should be set according to PHP Doc http://php.net/manual/en/function.stream-context-create.php
+		 */
 		public function setBody( $body, $type = 'text', $template_type = '', $context = NULL ) {
 			switch( strtolower( $type )) {
 				case '':
@@ -111,6 +154,8 @@
 					case 'url':
 						if ( $context ) {
 							$body = file_get_contents( $body, FALSE, stream_context_create( $context ));
+						} else {
+							$body = file_get_contents( $body, FALSE );
 						}
 						break;
 				}
@@ -122,6 +167,9 @@
 			return $this;
 		}
 		
+		/**
+		 * unsetHeader/setHeader, sets and unsets a mail header. Note the name/key is case sensative.
+		 */
 		public function unsetHeader( $name ) { unset( $this->_headers[$name] ); return $this; }
 		public function setHeader( $key, $value ) {
 			if ( empty( $key ))
@@ -250,16 +298,11 @@
 			$this->setMode( $mode );
 		}
 		
-		// Protected functions
 		public function getData() {
 			$data = null;
 			
 			if ( file_exists( $this->_path )) {
-				/*$file = fopen( $this->_path,'r' ); // Open the file with read rights
-				$data = fread( $file, filesize( $this->_path )); // Read all of the data from the file
-				fclose($file); // Close the file handle*/
 				$data = file_get_contents( $this->_path );
-				
 				$data = chunk_split(base64_encode( $data )); // Base64 encode and split up the data so it can be sent
 			} else 
 				throw new Exception( sprintf( 'Speedy Mail - Error! Could not open file %s', $this->_path ));
